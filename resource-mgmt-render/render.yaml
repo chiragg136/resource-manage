@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: resource-mgmt
+    env: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: resource-mgmt-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+databases:
+  - name: resource-mgmt-db
+    databaseName: resource_management_db
+    user: resadmin
+    plan: free

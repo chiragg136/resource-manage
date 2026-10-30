@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Resource Management</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>ResMgmt</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html?v=2" class="nav-item active">
+        <i class="fa-solid fa-house"></i> Dashboard
+      </a>
+      <a href="employees.html?v=2" class="nav-item">
+        <i class="fa-solid fa-users"></i> Employees
+      </a>
+      <a href="sows.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-contract"></i> SOW Master
+      </a>
+      <a href="invoices.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+      </a>
+      <a href="payments.html?v=2" class="nav-item">
+        <i class="fa-solid fa-money-check-dollar"></i> Payments
+      </a>
+    </nav>
+    <div class="sidebar-footer">Enterprise Edition v2.0</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="page-title">Dashboard Overview</div>
+        <div class="page-subtitle">Track resource allocation, billing, and payments</div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- KPI Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background: #eff6ff; color: #2563eb;">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div>
+            <div class="kpi-label">Total Employees</div>
+            <div class="kpi-value" id="kpi-emp">â€”</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background: #fdf2f8; color: #db2777;">
+            <i class="fa-solid fa-file-contract"></i>
+          </div>
+          <div>
+            <div class="kpi-label">Active SOWs</div>
+            <div class="kpi-value" id="kpi-sow">â€”</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background: #fffbeb; color: #d97706;">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div>
+            <div class="kpi-label">Pending Invoices</div>
+            <div class="kpi-value" id="kpi-inv-pending">â€”</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+            <i class="fa-solid fa-sack-dollar"></i>
+          </div>
+          <div>
+            <div class="kpi-label">Revenue Collected</div>
+            <div class="kpi-value" id="kpi-rev" style="color:#16a34a">â€”</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background: #fef2f2; color: #dc2626;">
+            <i class="fa-solid fa-money-bill-trend-up"></i>
+          </div>
+          <div>
+            <div class="kpi-label">Outstanding Amt</div>
+            <div class="kpi-value" id="kpi-out" style="color:#dc2626">â€”</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Tables Grid -->
+      <div class="form-grid">
+        <!-- Recent SOWs -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent SOWs</span>
+            <a href="sows.html?v=2" style="font-size:13px; font-weight:500;">View All â†’</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>SOW No</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Ends On</th>
+                </tr>
+              </thead>
+              <tbody id="dash-sow-body">
+                <tr><td colspan="4" class="text-center text-muted"><span class="spinner"></span> Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Invoices -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Pending Invoices</span>
+            <a href="invoices.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+      </a>
+      <a href="payments.html?v=2" class="nav-item">
+        <i class="fa-solid fa-money-check-dollar"></i> Payments
+      </a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Inv No</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Diff Amount</th>
+                </tr>
+              </thead>
+              <tbody id="dash-inv-body">
+                <tr><td colspan="4" class="text-center text-muted"><span class="spinner"></span> Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js?v=6"></script>
+<script>
+  async function loadDashboard() {
+    try {
+      const data = await API.get('/dashboard');
+      
+      // Update KPIs
+      document.getElementById('kpi-emp').textContent = data.total_employees;
+      document.getElementById('kpi-sow').textContent = data.active_sows;
+      document.getElementById('kpi-inv-pending').textContent = data.pending_invoices;
+      document.getElementById('kpi-rev').textContent = fmtCurrency(data.total_revenue_collected);
+      document.getElementById('kpi-out').textContent = fmtCurrency(data.total_outstanding);
+
+      // SOW Table
+      const sb = document.getElementById('dash-sow-body');
+      if (!data.recent_sows.length) {
+        sb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No recent SOWs</td></tr>';
+      } else {
+        sb.innerHTML = data.recent_sows.slice(0, 5).map(s => `
+          <tr>
+            <td class="fw-bold">${s.sow_no}</td>
+            <td>${s.customer}</td>
+            <td class="fw-bold">${fmtCurrency(s.amount)}</td>
+            <td class="text-muted">${fmtDate(s.end_date)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // Invoice Table
+      const ib = document.getElementById('dash-inv-body');
+      const pending = data.recent_invoices.filter(i => i.diff_amount > 0).slice(0, 5);
+      if (!pending.length) {
+        ib.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No pending invoices</td></tr>';
+      } else {
+        ib.innerHTML = pending.map(i => `
+          <tr>
+            <td class="fw-bold">${i.inv_no}</td>
+            <td class="fw-bold">${fmtCurrency(i.inv_amount)}</td>
+            <td>${invoiceStatusBadge(i.invoice_status)}</td>
+            <td class="diff-positive">${fmtCurrency(i.diff_amount)}</td>
+          </tr>
+        `).join('');
+      }
+    } catch (err) {
+      showToast('Error loading dashboard: ' + err.message, 'error');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+<script src="js/chatbot.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,502 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOW Master - Resource Management</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+<style>
+/* Guaranteed Soft-Delete Styling */
+tr.deleted-row > td { background-color: #ffe6e6 !important; }
+tr.deleted-row > td, tr.deleted-row > td span, tr.deleted-row > td div, tr.deleted-row > td a, tr.deleted-row > td i:not(.text-success) { color: #dc2626 !important; }
+tr.deleted-row > td .text-success, tr.deleted-row > td button.text-success i { color: #198754 !important; }
+tr.deleted-row .deleted-badge { background-color: #fca5a5 !important; color: #7f1d1d !important; border: 1px solid #7f1d1d !important; display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; margin-left: 8px; vertical-align: middle; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>ResMgmt</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html?v=2" class="nav-item">
+        <i class="fa-solid fa-house"></i> Dashboard
+      </a>
+      <a href="employees.html?v=2" class="nav-item">
+        <i class="fa-solid fa-users"></i> Employees
+      </a>
+      <a href="sows.html?v=2" class="nav-item active">
+        <i class="fa-solid fa-file-contract"></i> SOW Master
+      </a>
+      <a href="invoices.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+      </a>
+      <a href="payments.html?v=2" class="nav-item">
+        <i class="fa-solid fa-money-check-dollar"></i> Payments
+      </a>
+    </nav>
+    <div class="sidebar-footer">Enterprise Edition v2.0</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="page-title">Statement of Work (SOW)</div>
+        <div class="page-subtitle">Manage client contracts, dates, and amounts</div>
+      </div>
+      <div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="openImportModal('sows')">
+            <i class="fa-solid fa-file-import"></i> Import Data
+          </button>
+          <button class="btn btn-primary" onclick="showInlineAdd()">
+            <i class="fa-solid fa-plus"></i> Add SOW
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="card">
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+          <div class="d-flex align-items-center gap-2 justify-content-between">
+            <div>
+               <span class="card-title">SOW Directory</span>
+               <span class="badge badge-secondary" id="sow-count">0</span>
+            </div>
+          </div>
+          
+          <div class="table-toolbar">
+            <div class="search-box">
+              <i class="fa-solid fa-search"></i>
+              <input type="text" id="sow-search" placeholder="Search SOW, PO, etc..." oninput="loadAll()" />
+            </div>
+
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+
+            <span class="toolbar-label"><i class="fa-solid fa-filter"></i> Filter:</span>
+            <select id="sow-filter-customer" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="">All Customers</option>
+              <option value="TechCorp Ltd">TechCorp Ltd</option>
+              <option value="Infra Systems">Infra Systems</option>
+              <option value="FinServ Inc">FinServ Inc</option>
+              <option value="RetailMax">RetailMax</option>
+              <option value="HealthPlus">HealthPlus</option>
+            </select>
+
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+            
+            <span class="toolbar-label"><i class="fa-solid fa-sort"></i> Sort:</span>
+            <select id="sow-sort-by" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="sort_order">Sort Order (Custom)</option>
+              <option value="created_at">Insertion Date</option>
+              <option value="customer">Customer</option>
+              <option value="amount">Amount</option>
+            </select>
+            
+            <select id="sow-sort-order" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="asc">Ascending / Oldest First</option>
+              <option value="desc">Descending / Newest First</option>
+            </select>
+            
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+
+            <label style="display:flex; align-items:center; gap:5px; margin:0;">
+              <input type="checkbox" id="sow-show-deleted" onchange="loadAll()" />
+              Show Deleted
+            </label>
+            <button class="btn btn-secondary btn-sm" onclick="clearFilters()" style="padding:4px 8px; font-size:12px; margin-left:auto;">Clear</button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 60vh;">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th style="width:40px;"></th>
+                <th style="width:40px;">#</th>
+                <th>SOW Number</th>
+                <th>Customer</th>
+                <th>Employee</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Amount</th>
+                <th>PO Number</th>
+                <th>Created Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sow-body">
+              <tr><td colspan="11"><div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="page-info" id="page-info">Ã¢â‚¬â€</span>
+          <div class="page-btns" id="page-btns"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-backdrop" id="sow-modal">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add SOW</div>
+      <button class="btn-close" onclick="closeModal('sow-modal')">Ãƒâ€”</button>
+    </div>
+    <div class="modal-body">
+      <form id="sow-form" onsubmit="return false;">
+        <input type="hidden" id="sow-id" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">SOW Number *</label>
+            <input type="text" class="form-control" id="sow-no" required placeholder="SOW-001" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Customer Name *</label>
+            <input type="text" class="form-control" id="sow-customer" required placeholder="ACME Corp" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employee</label>
+            <select class="form-control" id="sow-emp">
+              <option value="">-- Select Employee --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">PO Number</label>
+            <input type="text" class="form-control" id="sow-po" placeholder="PO-1234" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Start Date *</label>
+            <input type="date" class="form-control" id="sow-start" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date *</label>
+            <input type="date" class="form-control" id="sow-end" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount ($) *</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="sow-amt" required placeholder="0.00" />
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('sow-modal')">Cancel</button>
+      <button class="btn btn-primary" id="sow-save-btn" onclick="saveSOW()">
+        <i class="fa-solid fa-check"></i> Save SOW
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js?v=6"></script>
+<script>
+  let sows = [];
+  let employees = [];
+  let currentPage = 1;
+        const uniqueCust = [...new Set(sows.map(s => s.customer))];
+    const dl = document.getElementById('cust-list') || document.createElement('datalist');
+    dl.id = 'cust-list'; dl.innerHTML = uniqueCust.map(c => `<option value="${c}">`).join('');
+    if (!document.getElementById('cust-list')) document.body.appendChild(dl);
+  const PAGE_SIZE = 10;
+
+  async function loadAll() {
+    try {
+      const search = document.getElementById('sow-search').value;
+      const sortBy = document.getElementById('sow-sort-by').value;
+      const order  = document.getElementById('sow-sort-order').value;
+      const incDel = document.getElementById('sow-show-deleted').checked;
+      const cust   = document.getElementById('sow-filter-customer').value;
+      const q = `?search=${encodeURIComponent(search)}&sort_by=${sortBy}&order=${order}&include_deleted=${incDel}&customer=${encodeURIComponent(cust)}`;
+      [sows, employees] = await Promise.all([API.get('/sows' + q), API.get('/employees')]);
+      document.getElementById('sow-count').textContent = sows.length;
+      currentPage = 1;
+        const uniqueCust = [...new Set(sows.map(s => s.customer))];
+    const dl = document.getElementById('cust-list') || document.createElement('datalist');
+    dl.id = 'cust-list'; dl.innerHTML = uniqueCust.map(c => `<option value="${c}">`).join('');
+    if (!document.getElementById('cust-list')) document.body.appendChild(dl);
+      renderTable();
+    } catch (err) { showToast('Failed to load data', 'error'); }
+  }
+
+  function clearFilters() {
+    document.getElementById('sow-search').value = '';
+    document.getElementById('sow-filter-customer').value = '';
+    document.getElementById('sow-sort-by').value = 'sort_order';
+    document.getElementById('sow-sort-order').value = 'asc';
+    document.getElementById('sow-show-deleted').checked = false;
+    loadAll();
+  }
+
+  let dragSrcEl = null;
+  function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; this.classList.add('dragging'); }
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.querySelectorAll('#sow-body tr').forEach(r => r.classList.remove('drag-over'));
+    this.classList.add('drag-over'); return false;
+  }
+  function handleDragLeave() { this.classList.remove('drag-over'); }
+  async function handleDrop(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#sow-body tr').forEach(r => r.classList.remove('drag-over'));
+    if (dragSrcEl && dragSrcEl !== this) {
+      const di = sows.findIndex(x => x.id === parseInt(dragSrcEl.dataset.id));
+      const ti = sows.findIndex(x => x.id === parseInt(this.dataset.id));
+      const [m] = sows.splice(di, 1); sows.splice(ti, 0, m);
+      const payload = sows.map((item, idx) => ({ id: item.id, sort_order: idx + 1 }));
+      try { await API.put('/sows/reorder', { items: payload }); renderTable(); showToast('Order saved'); }
+      catch(err) { showToast('Failed to save order', 'error'); }
+    } return false;
+  }
+  function handleDragEnd() { this.classList.remove('dragging'); document.querySelectorAll('#sow-body tr').forEach(r => r.classList.remove('drag-over')); }
+  function attachDnD() {
+    document.querySelectorAll('#sow-body tr.draggable').forEach(row => {
+      row.addEventListener('dragstart', handleDragStart, false);
+      row.addEventListener('dragover',  handleDragOver,  false);
+      row.addEventListener('dragleave', handleDragLeave, false);
+      row.addEventListener('drop',      handleDrop,      false);
+      row.addEventListener('dragend',   handleDragEnd,   false);
+    });
+  }
+
+  function renderTable() {
+    const total = sows.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = sows.slice(start, start + PAGE_SIZE);
+    
+    document.getElementById('page-info').textContent =
+      total ? 'Showing ' + (start+1) + '-' + Math.min(start+PAGE_SIZE,total) + ' of ' + total + ' records' : 'No records found';
+      
+    const body = document.getElementById('sow-body');
+    if (!page.length) {
+      body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fa-solid fa-folder-open"></i><p>No records found</p></div></td></tr>';
+    } else {
+      body.innerHTML = page.map((s, i) => {
+        const emp = s.resource;
+        const empName = emp ? (emp.first_name + ' ' + emp.last_name) : '<span class="text-muted">Unassigned</span>';
+        return `
+        <tr class="draggable ${s.is_deleted ? 'deleted-row' : ''}" draggable="true" data-id="${s.id}">
+          <td><i class="fa-solid fa-bars drag-handle"></i></td>
+          <td class="text-muted">${start + i + 1}</td>
+          <td class="fw-bold">${s.sow_no}${s.is_deleted ? '<span class="deleted-badge">Deleted</span>' : ''}</td>
+          <td>${s.customer}</td>
+          <td>${empName}</td>
+          <td class="text-muted">${fmtDate(s.start_date)}</td>
+          <td class="text-muted">${fmtDate(s.end_date)}</td>
+          <td class="fw-bold">${fmtCurrency(s.amount)}</td>
+          <td class="text-muted">${s.po_number || '-'}</td>
+          <td class="text-muted">${fmtDateTime(s.created_at)}</td>
+          <td>
+            <div class="d-flex gap-2">
+              ${!s.is_deleted
+                ? '<button class="btn-icon" title="Edit" onclick="openEditModal(' + s.id + ')"><i class="fa-solid fa-pen"></i></button>' +
+                  '<button class="btn-icon text-danger" title="Delete" onclick="deleteSOW(' + s.id + ',\'' + s.sow_no + '\')"><i class="fa-solid fa-trash"></i></button>'
+                : '<button class="btn-icon text-success" title="Restore" onclick="restoreSOW(' + s.id + ')"><i class="fa-solid fa-rotate-left"></i> Restore</button>'}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    const btns = document.getElementById('page-btns'); btns.innerHTML = '';
+    const prev = document.createElement('button'); prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>';
+    prev.disabled = currentPage === 1; prev.onclick = () => { currentPage--; renderTable(); }; btns.appendChild(prev);
+    for (let p = 1; p <= totalPages; p++) {
+      const b = document.createElement('button'); b.className = 'page-btn' + (p===currentPage?' active':'');
+      b.textContent = p; b.onclick = () => { currentPage = p; renderTable(); }; btns.appendChild(b);
+    }
+    const next = document.createElement('button'); next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>';
+    next.disabled = currentPage === totalPages; next.onclick = () => { currentPage++; renderTable(); }; btns.appendChild(next);
+    attachDnD();
+  }
+
+  function populateEmpDropdown() {
+    const sel = document.getElementById('sow-emp');
+    sel.innerHTML = '<option value="">-- Select Employee --</option>' + employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name} (${e.emp_no})</option>`).join('');
+  }
+    let inlineAddActive = false;
+
+  function showInlineAdd() {
+    if (inlineAddActive) return;
+    inlineAddActive = true;
+    const body = document.getElementById('sow-body');
+    const tr = document.createElement('tr');
+    tr.id = 'inline-add-row';
+    tr.className = 'inline-add-row';
+    
+    let empOptions = '<option value="">-- Select --</option>' + employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name}</option>`).join('');
+
+    tr.innerHTML = `
+      <td></td>
+      <td>+</td>
+      <td><input type="text" id="inline-sow-no" placeholder="SOW-001" /></td>
+      <td><input type="text" id="inline-sow-cust" list="cust-list" autocomplete="off" placeholder="Customer" /></td>
+      <td><select id="inline-sow-emp">${empOptions}</select></td>
+      <td><input type="date" id="inline-sow-start" /></td>
+      <td><input type="date" id="inline-sow-end" /></td>
+      <td><input type="number" id="inline-sow-amt" step="0.01" min="0" placeholder="0.00" /></td>
+      <td><input type="text" id="inline-sow-po" placeholder="PO-123" /></td>
+      <td><span class="text-muted">Auto</span></td>
+      <td>
+        <div class="inline-actions">
+          <button class="btn-inline-save" onclick="saveInlineAdd()">Save</button>
+          <button class="btn-inline-cancel" onclick="cancelInlineAdd()">Cancel</button>
+        </div>
+      </td>
+    `;
+    if (body.querySelector('.empty-state')) {
+      body.innerHTML = '';
+    }
+    body.appendChild(tr);
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('inline-sow-no').focus();
+  }
+
+  function cancelInlineAdd() {
+    const row = document.getElementById('inline-add-row');
+    if (row) row.remove();
+    inlineAddActive = false;
+    if (sows.length === 0) renderTable();
+  }
+
+  async function saveInlineAdd() {
+    const payload = {
+      sow_no: document.getElementById('inline-sow-no').value.trim(),
+      customer: document.getElementById('inline-sow-cust').value.trim(),
+      name: document.getElementById('inline-sow-cust').value.trim() + ' Project',
+      po_number: document.getElementById('inline-sow-po').value.trim() || null,
+      start_date: document.getElementById('inline-sow-start').value,
+      end_date: document.getElementById('inline-sow-end').value,
+      amount: parseFloat(document.getElementById('inline-sow-amt').value) || 0,
+      resource_id: parseInt(document.getElementById('inline-sow-emp').value) || null
+    };
+        if (new Date(payload.start_date).getFullYear() < 2000 || new Date(payload.end_date).getFullYear() < 2000) {
+      showToast('Invalid year', 'error'); return;
+    }
+    if (!payload.sow_no || !payload.customer || !payload.start_date || !payload.end_date || !payload.resource_id) {
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+    try {
+      await API.post('/sows', payload);
+      showToast('SOW created');
+      inlineAddActive = false;
+      await loadAll();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function openAddModal() {
+    document.getElementById('modal-title').textContent='Add SOW';
+    document.getElementById('sow-id').value=''; document.getElementById('sow-form').reset();
+    populateEmpDropdown(); openModal('sow-modal');
+  }
+  function openEditModal(id) {
+    const s = sows.find(x => x.id === id); if (!s) return;
+    document.getElementById('modal-title').textContent = 'Edit SOW';
+    document.getElementById('sow-id').value = s.id;
+    document.getElementById('sow-no').value = s.sow_no;
+    document.getElementById('sow-customer').value = s.customer;
+    document.getElementById('sow-po').value = s.po_number || '';
+    document.getElementById('sow-start').value = s.start_date;
+    document.getElementById('sow-end').value = s.end_date;
+    document.getElementById('sow-amt').value = s.amount;
+    populateEmpDropdown();
+    document.getElementById('sow-emp').value = s.resource_id || '';
+    openModal('sow-modal');
+  }
+  async function saveSOW() {
+    const form = document.getElementById('sow-form');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const id = document.getElementById('sow-id').value;
+    const payload = {
+      sow_no: document.getElementById('sow-no').value.trim(),
+      customer: document.getElementById('sow-customer').value.trim(),
+      po_number: document.getElementById('sow-po').value.trim()||null,
+      start_date: document.getElementById('sow-start').value,
+      end_date: document.getElementById('sow-end').value,
+      amount: parseFloat(document.getElementById('sow-amt').value)||0,
+      resource_id: parseInt(document.getElementById('sow-emp').value) || null
+    };
+    const btn = document.getElementById('sow-save-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
+    try {
+      if (id) { await API.put('/sows/' + id, payload); showToast('SOW updated'); }
+      else     { await API.post('/sows', payload); showToast('SOW created'); }
+      closeModal('sow-modal'); await loadAll();
+    } catch (err) { showToast(err.message, 'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check"></i> Save SOW'; }
+  }
+  function deleteSOW(id, no) {
+    showConfirm('Mark ' + no + ' as deleted? The record stays in the database and can be restored.', async () => {
+      try { await API.delete('/sows/' + id); showToast('Marked as deleted'); await loadAll(); }
+      catch(err) { showToast(err.message, 'error'); }
+    }, 'Soft Delete');
+  }
+  async function restoreSOW(id) {
+    try { await API.put('/sows/' + id + '/restore', {}); showToast('SOW restored'); await loadAll(); }
+    catch(err) { showToast(err.message, 'error'); }
+  }
+  document.addEventListener('DOMContentLoaded', loadAll);
+</script>
+  <!-- Import Modal -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div class="modal-title" id="import-title">Import Data</div>
+        <button class="btn-close" onclick="closeModal('import-modal')">x</button>
+      </div>
+      <div class="modal-body" style="max-height:60vh; overflow:auto;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+          <div>
+            <label class="form-label">Upload CSV or Excel File</label>
+            <input type="file" id="import-file" class="form-control" accept=".csv, .xlsx" onchange="previewImport(event)" />
+          </div>
+          <div>
+            <a href="#" id="import-template-link" class="btn btn-secondary" style="margin-top:22px;"><i class="fa-solid fa-download"></i> Download Template</a>
+          </div>
+        </div>
+        <div id="import-status" style="margin-bottom:10px; font-weight:bold;"></div>
+        <div class="table-responsive" style="max-height: 40vh; border:1px solid #dee2e6;">
+          <table class="table table-striped table-sm" id="import-preview-table" style="font-size:12px; display:none;">
+            <thead id="import-preview-head"></thead>
+            <tbody id="import-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('import-modal')">Cancel</button>
+        <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmImport()" disabled>
+          <i class="fa-solid fa-check"></i> Confirm Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script src="js/chatbot.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,539 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Master Employee - Resource Management</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+<style>
+/* Guaranteed Soft-Delete Styling */
+tr.deleted-row > td { background-color: #ffe6e6 !important; }
+tr.deleted-row > td, tr.deleted-row > td span, tr.deleted-row > td div, tr.deleted-row > td a, tr.deleted-row > td i:not(.text-success) { color: #dc2626 !important; }
+tr.deleted-row > td .text-success, tr.deleted-row > td button.text-success i { color: #198754 !important; }
+tr.deleted-row .deleted-badge { background-color: #fca5a5 !important; color: #7f1d1d !important; border: 1px solid #7f1d1d !important; display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; margin-left: 8px; vertical-align: middle; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>ResMgmt</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html?v=2" class="nav-item">
+        <i class="fa-solid fa-house"></i> Dashboard
+      </a>
+      <a href="employees.html?v=2" class="nav-item active">
+        <i class="fa-solid fa-users"></i> Employees
+      </a>
+      <a href="sows.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-contract"></i> SOW Master
+      </a>
+      <a href="invoices.html?v=2" class="nav-item">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+      </a>
+      <a href="payments.html?v=2" class="nav-item">
+        <i class="fa-solid fa-money-check-dollar"></i> Payments
+      </a>
+    </nav>
+    <div class="sidebar-footer">Enterprise Edition v2.0</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="page-title">Master Employee</div>
+        <div class="page-subtitle">Manage resource details, experience, and location</div>
+      </div>
+      <div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="openImportModal('employees')">
+            <i class="fa-solid fa-file-import"></i> Import Data
+          </button>
+          <button class="btn btn-primary" onclick="showInlineAdd()">
+            <i class="fa-solid fa-plus"></i> Add Employee
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="card">
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+          <div class="d-flex align-items-center gap-2 justify-content-between">
+            <div>
+               <span class="card-title">Employee Directory</span>
+               <span class="badge badge-secondary" id="emp-count">0</span>
+            </div>
+          </div>
+          
+          <div class="table-toolbar">
+            <div class="search-box">
+              <i class="fa-solid fa-search"></i>
+              <input type="text" id="emp-search" placeholder="Search name, id, location..." oninput="loadAll()" />
+            </div>
+
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+
+            <span class="toolbar-label"><i class="fa-solid fa-filter"></i> Filter:</span>
+            <select id="emp-filter-location" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="">All Locations</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Hyderabad">Hyderabad</option><option value="Pune">Pune</option><option value="Chennai">Chennai</option>
+            </select>
+
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+            
+            <span class="toolbar-label"><i class="fa-solid fa-sort"></i> Sort:</span>
+            <select id="emp-sort-by" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="sort_order">Sort Order (Custom)</option>
+              <option value="created_at">Insertion Date</option>
+              <option value="first_name">First Name</option>
+              <option value="total_exp">Experience</option>
+            </select>
+            
+            <select id="emp-sort-order" class="form-control" style="width:auto;" onchange="loadAll()">
+              <option value="asc">Ascending / Oldest First</option>
+              <option value="desc">Descending / Newest First</option>
+            </select>
+            
+            <div style="width: 1px; height: 24px; background: #dee2e6; margin: 0 5px;"></div>
+
+            <label style="display:flex; align-items:center; gap:5px; margin:0;">
+              <input type="checkbox" id="emp-show-deleted" onchange="loadAll()" />
+              Show Deleted
+            </label>
+            <button class="btn btn-secondary btn-sm" onclick="clearFilters()" style="padding:4px 8px; font-size:12px; margin-left:auto;">Clear</button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 60vh;">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th style="width:40px;"></th>
+                <th style="width:40px;">#</th>
+                <th>Emp No</th>
+                <th>Name</th>
+                <th>Joining Date</th>
+                <th>Total Exp (Yrs)</th>
+                <th>Relevant Exp (Yrs)</th>
+                <th>Location</th>
+                <th>Created Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="emp-body">
+              <tr><td colspan="10"><div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="page-info" id="page-info">â€”</span>
+          <div class="page-btns" id="page-btns"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-backdrop" id="emp-modal">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add Employee</div>
+      <button class="btn-close" onclick="closeModal('emp-modal')">Ã—</button>
+    </div>
+    <div class="modal-body">
+      <form id="emp-form" onsubmit="return false;">
+        <input type="hidden" id="emp-id" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Employee Number *</label>
+            <input type="text" class="form-control" id="emp-no" required placeholder="EMP001" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Joining Date *</label>
+            <input type="date" class="form-control" id="emp-join" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" class="form-control" id="emp-fn" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input type="text" class="form-control" id="emp-ln" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Total Experience (Years) *</label>
+            <input type="number" step="0.1" min="0" class="form-control" id="emp-total-exp" required placeholder="0.0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Relevant Experience (Years) *</label>
+            <input type="number" step="0.1" min="0" class="form-control" id="emp-rel-exp" required placeholder="0.0" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Working Location *</label>
+            <select class="form-control" id="emp-loc" required>
+              <option value="">-- Select Location --</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Pune">Pune</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Chennai">Chennai</option>
+              <option value="Delhi NCR">Delhi NCR</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Home Address</label>
+            <input type="text" class="form-control" id="emp-address" placeholder="Full address" />
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('emp-modal')">Cancel</button>
+      <button class="btn btn-primary" id="emp-save-btn" onclick="saveEmployee()">
+        <i class="fa-solid fa-check"></i> Save Employee
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js?v=6"></script>
+<script>
+  let employees = [];
+  let currentPage = 1;
+  const PAGE_SIZE = 10;
+
+  async function loadAll() {
+    try {
+      const search = document.getElementById('emp-search').value;
+      const sortBy = document.getElementById('emp-sort-by').value;
+      const order  = document.getElementById('emp-sort-order').value;
+      const incDel = document.getElementById('emp-show-deleted').checked;
+      const loc    = document.getElementById('emp-filter-location').value;
+      
+      const q = `?search=${encodeURIComponent(search)}&sort_by=${sortBy}&order=${order}&include_deleted=${incDel}&location=${encodeURIComponent(loc)}`;
+      employees = await API.get('/employees' + q);
+      document.getElementById('emp-count').textContent = employees.length;
+      currentPage = 1;
+      renderTable();
+    } catch (err) { showToast('Failed to load data', 'error'); }
+  }
+
+  function clearFilters() {
+    document.getElementById('emp-search').value = '';
+    document.getElementById('emp-filter-location').value = '';
+    document.getElementById('emp-sort-by').value = 'sort_order';
+    document.getElementById('emp-sort-order').value = 'asc';
+    document.getElementById('emp-show-deleted').checked = false;
+    loadAll();
+  }
+
+  let dragSrcEl = null;
+  function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; this.classList.add('dragging'); }
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.querySelectorAll('#emp-body tr').forEach(r => r.classList.remove('drag-over'));
+    this.classList.add('drag-over'); return false;
+  }
+  function handleDragLeave() { this.classList.remove('drag-over'); }
+  async function handleDrop(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#emp-body tr').forEach(r => r.classList.remove('drag-over'));
+    if (dragSrcEl && dragSrcEl !== this) {
+      const di = employees.findIndex(x => x.id === parseInt(dragSrcEl.dataset.id));
+      const ti = employees.findIndex(x => x.id === parseInt(this.dataset.id));
+      const [m] = employees.splice(di, 1); employees.splice(ti, 0, m);
+      const payload = employees.map((item, idx) => ({ id: item.id, sort_order: idx + 1 }));
+      try { await API.put('/employees/reorder', { items: payload }); renderTable(); showToast('Order saved'); }
+      catch(err) { showToast('Failed to save order', 'error'); }
+    } return false;
+  }
+  function handleDragEnd() { this.classList.remove('dragging'); document.querySelectorAll('#emp-body tr').forEach(r => r.classList.remove('drag-over')); }
+  function attachDnD() {
+    document.querySelectorAll('#emp-body tr.draggable').forEach(row => {
+      row.addEventListener('dragstart', handleDragStart, false);
+      row.addEventListener('dragover',  handleDragOver,  false);
+      row.addEventListener('dragleave', handleDragLeave, false);
+      row.addEventListener('drop',      handleDrop,      false);
+      row.addEventListener('dragend',   handleDragEnd,   false);
+    });
+  }
+
+  function renderTable() {
+    const total = employees.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = employees.slice(start, start + PAGE_SIZE);
+    document.getElementById('page-info').textContent =
+      total ? `Showing ${start+1}-${Math.min(start+PAGE_SIZE,total)} of ${total} records` : 'No records found';
+    const body = document.getElementById('emp-body');
+    if (!page.length) {
+      body.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class="fa-solid fa-folder-open"></i><p>No records found</p></div></td></tr>`;
+    } else {
+      body.innerHTML = page.map((e, i) => `
+        <tr class="draggable ${e.is_deleted ? 'deleted-row' : ''}" draggable="true" data-id="${e.id}">
+          <td><i class="fa-solid fa-bars drag-handle"></i></td>
+          <td class="text-muted">${start + i + 1}</td>
+          <td class="fw-bold">${e.emp_no}${e.is_deleted ? '<span class="deleted-badge">Deleted</span>' : ''}</td>
+          <td>${e.first_name} ${e.last_name}</td>
+          <td class="text-muted">${fmtDate(e.joining_date)}</td>
+          <td>${e.total_exp}</td>
+          <td>${e.relevant_exp}</td>
+          <td>${e.working_location}</td>
+          <td class="text-muted">${fmtDateTime(e.created_at)}</td>
+          <td>
+            <div class="d-flex gap-2">
+              ${!e.is_deleted
+                ? `<button class="btn-icon" title="Edit" onclick="openEditModal(${e.id})"><i class="fa-solid fa-pen"></i></button>
+                   <button class="btn-icon text-danger" title="Delete" onclick="deleteEmployee(${e.id},'${e.emp_no}')"><i class="fa-solid fa-trash"></i></button>`
+                : `<button class="btn-icon text-success" title="Restore" onclick="restoreEmployee(${e.id})"><i class="fa-solid fa-rotate-left"></i> Restore</button>`}
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+    const btns = document.getElementById('page-btns'); btns.innerHTML = '';
+    const prev = document.createElement('button'); prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>';
+    prev.disabled = currentPage === 1; prev.onclick = () => { currentPage--; renderTable(); }; btns.appendChild(prev);
+    for (let p = 1; p <= totalPages; p++) {
+      const b = document.createElement('button'); b.className = 'page-btn' + (p===currentPage?' active':'');
+      b.textContent = p; b.onclick = () => { currentPage = p; renderTable(); }; btns.appendChild(b);
+    }
+    const next = document.createElement('button'); next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>';
+    next.disabled = currentPage === totalPages; next.onclick = () => { currentPage++; renderTable(); }; btns.appendChild(next);
+    attachDnD();
+  }
+
+    function showInlineAdd() {
+    if (document.getElementById('inline-add-row')) return;
+    var body = document.getElementById('emp-body');
+    var tr = document.createElement('tr');
+    tr.id = 'inline-add-row';
+    tr.className = 'inline-add-row';
+    tr.innerHTML = '<td colspan="10"><div class="inline-add-panel">' +
+      '<div class="panel-title"><i class="fa-solid fa-user-plus"></i> Add New Employee</div>' +
+      '<div class="panel-grid">' +
+        '<div class="panel-field"><label>Emp Number *</label><input type="text" id="ia-emp-no" placeholder="EMP006" /></div>' +
+        '<div class="panel-field"><label>First Name *</label><input type="text" id="ia-fn" placeholder="First Name" /></div>' +
+        '<div class="panel-field"><label>Last Name *</label><input type="text" id="ia-ln" placeholder="Last Name" /></div>' +
+        '<div class="panel-field"><label>Joining Date *</label><input type="date" id="ia-join" /></div>' +
+        '<div class="panel-field"><label>Total Exp (Yrs) *</label><input type="number" id="ia-total-exp" placeholder="0.0" step="0.1" min="0" /></div>' +
+        '<div class="panel-field"><label>Relevant Exp (Yrs) *</label><input type="number" id="ia-rel-exp" placeholder="0.0" step="0.1" min="0" /></div>' +
+        '<div class="panel-field"><label>Working Location *</label><select id="ia-loc"><option value="">-- Select --</option><option>Bangalore</option><option>Mumbai</option><option>Pune</option><option>Hyderabad</option><option>Chennai</option><option>Delhi NCR</option></select></div>' +
+        '<div class="panel-field full-span"><label>Home Address</label><input type="text" id="ia-address" placeholder="Full home address (optional)" /></div>' +
+      '</div>' +
+      '<div class="panel-actions">' +
+        '<button class="btn btn-primary" onclick="saveInlineAdd()"><i class="fa-solid fa-check"></i> Save Employee</button>' +
+        '<button class="btn btn-secondary" onclick="cancelInlineAdd()"><i class="fa-solid fa-xmark"></i> Cancel</button>' +
+      '</div>' +
+    '</div></td>';
+    body.prepend(tr);
+    document.getElementById('ia-emp-no').focus();
+  }
+  function cancelInlineAdd() {
+    const r = document.getElementById('inline-add-row');
+    if (r) r.remove();
+  }
+  async function saveInlineAdd() {
+    const no = document.getElementById('ia-emp-no').value.trim();
+    const fn = document.getElementById('ia-fn').value.trim();
+    const ln = document.getElementById('ia-ln').value.trim();
+    const jd = document.getElementById('ia-join').value;
+    const te = document.getElementById('ia-total-exp').value;
+    const re = document.getElementById('ia-rel-exp').value;
+    const lc = document.getElementById('ia-loc').value;
+    if (!no||!fn||!ln||!jd||!lc) { showToast('Please fill all required fields','error'); return; }
+    const addr = document.getElementById('ia-address').value.trim();
+    const payload = { emp_no:no, first_name:fn, last_name:ln, joining_date:jd,
+      total_exp:parseFloat(te)||0, relevant_exp:parseFloat(re)||0, working_location:lc,
+      home_address: addr||null };
+    try {
+      await API.post('/employees', payload);
+      showToast('Employee created');
+      cancelInlineAdd();
+      await loadAll();
+    } catch(err) { showToast(err.message,'error'); }
+  }
+    let inlineAddActive = false;
+
+  function showInlineAdd() {
+    if (inlineAddActive) return;
+    inlineAddActive = true;
+    const body = document.getElementById('emp-body');
+    const tr = document.createElement('tr');
+    tr.id = 'inline-add-row';
+    tr.className = 'inline-add-row';
+    tr.innerHTML = `
+      <td></td>
+      <td>+</td>
+      <td><input type="text" id="inline-emp-no" placeholder="EMP001" /></td>
+      <td style="display:flex; gap:4px;"><input type="text" id="inline-emp-fn" placeholder="First" style="width:50%" /><input type="text" id="inline-emp-ln" placeholder="Last" style="width:50%" /></td>
+      <td><input type="date" id="inline-emp-join" /></td>
+      <td><input type="number" id="inline-emp-total" step="0.1" min="0" placeholder="0.0" /></td>
+      <td><input type="number" id="inline-emp-rel" step="0.1" min="0" placeholder="0.0" /></td>
+      <td>
+        <select id="inline-emp-loc">
+          <option value="Bangalore">Bangalore</option>
+          <option value="Mumbai">Mumbai</option>
+          <option value="Pune">Pune</option>
+          <option value="Hyderabad">Hyderabad</option>
+          <option value="Chennai">Chennai</option>
+          <option value="Delhi NCR">Delhi NCR</option>
+        </select>
+      </td>
+      <td><span class="text-muted">Auto</span></td>
+      <td>
+        <div class="inline-actions">
+          <button class="btn-inline-save" onclick="saveInlineAdd()">Save</button>
+          <button class="btn-inline-cancel" onclick="cancelInlineAdd()">Cancel</button>
+        </div>
+      </td>
+    `;
+    if (body.querySelector('.empty-state')) {
+      body.innerHTML = '';
+    }
+    body.appendChild(tr);
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('inline-emp-no').focus();
+  }
+
+  function cancelInlineAdd() {
+    const row = document.getElementById('inline-add-row');
+    if (row) row.remove();
+    inlineAddActive = false;
+    if (employees.length === 0) renderTable();
+  }
+
+  async function saveInlineAdd() {
+    const payload = {
+      emp_no: document.getElementById('inline-emp-no').value.trim(),
+      first_name: document.getElementById('inline-emp-fn').value.trim(),
+      last_name: document.getElementById('inline-emp-ln').value.trim(),
+      joining_date: document.getElementById('inline-emp-join').value,
+      total_exp: parseFloat(document.getElementById('inline-emp-total').value) || 0,
+      relevant_exp: parseFloat(document.getElementById('inline-emp-rel').value) || 0,
+      working_location: document.getElementById('inline-emp-loc').value
+    };
+        if (new Date(payload.joining_date).getFullYear() < 2000) { showToast('Invalid year', 'error'); return; }
+    if (!payload.emp_no || !payload.first_name || !payload.last_name || !payload.joining_date) {
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+    try {
+      await API.post('/employees', payload);
+      showToast('Employee created');
+      inlineAddActive = false;
+      await loadAll();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function openAddModal() { showInlineAdd(); }
+  function openEditModal(id) {
+    const e = employees.find(x => x.id === id); if (!e) return;
+    document.getElementById('modal-title').textContent = 'Edit Employee';
+    document.getElementById('emp-id').value = e.id;
+    document.getElementById('emp-no').value = e.emp_no;
+    document.getElementById('emp-fn').value = e.first_name;
+    document.getElementById('emp-ln').value = e.last_name;
+    document.getElementById('emp-join').value = e.joining_date;
+    document.getElementById('emp-total-exp').value = e.total_exp;
+    document.getElementById('emp-rel-exp').value = e.relevant_exp;
+    document.getElementById('emp-loc').value = e.working_location;
+    document.getElementById('emp-address').value = e.home_address || '';
+    openModal('emp-modal');
+  }
+  async function saveEmployee() {
+    const form = document.getElementById('emp-form');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const id = document.getElementById('emp-id').value;
+    const payload = {
+      emp_no: document.getElementById('emp-no').value.trim(),
+      first_name: document.getElementById('emp-fn').value.trim(),
+      last_name: document.getElementById('emp-ln').value.trim(),
+      joining_date: document.getElementById('emp-join').value,
+      total_exp: parseFloat(document.getElementById('emp-total-exp').value)||0,
+      relevant_exp: parseFloat(document.getElementById('emp-rel-exp').value)||0,
+      working_location: document.getElementById('emp-loc').value,
+      home_address: document.getElementById('emp-address').value.trim()||null
+    };
+    const btn = document.getElementById('emp-save-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
+    try {
+      if (id) { await API.put(`/employees/${id}`, payload); showToast('Employee updated'); }
+      else     { await API.post('/employees', payload); showToast('Employee created'); }
+      closeModal('emp-modal'); await loadAll();
+    } catch (err) { showToast(err.message, 'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check"></i> Save Employee'; }
+  }
+  function deleteEmployee(id, emp_no) {
+    showConfirm(`Mark "${emp_no}" as deleted? The record stays in the database and can be restored.`, async () => {
+      try { await API.delete(`/employees/${id}`); showToast('Marked as deleted'); await loadAll(); }
+      catch(err) { showToast(err.message, 'error'); }
+    }, 'Soft Delete');
+  }
+  async function restoreEmployee(id) {
+    try { await API.put(`/employees/${id}/restore`, {}); showToast('Employee restored'); await loadAll(); }
+    catch(err) { showToast(err.message, 'error'); }
+  }
+  document.addEventListener('DOMContentLoaded', loadAll);
+</script>
+  <!-- Import Modal -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <div class="modal-title" id="import-title">Import Data</div>
+        <button class="btn-close" onclick="closeModal('import-modal')">x</button>
+      </div>
+      <div class="modal-body" style="max-height:60vh; overflow:auto;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+          <div>
+            <label class="form-label">Upload CSV or Excel File</label>
+            <input type="file" id="import-file" class="form-control" accept=".csv, .xlsx" onchange="previewImport(event)" />
+          </div>
+          <div>
+            <a href="#" id="import-template-link" class="btn btn-secondary" style="margin-top:22px;"><i class="fa-solid fa-download"></i> Download Template</a>
+          </div>
+        </div>
+        <div id="import-status" style="margin-bottom:10px; font-weight:bold;"></div>
+        <div class="table-responsive" style="max-height: 40vh; border:1px solid #dee2e6;">
+          <table class="table table-striped table-sm" id="import-preview-table" style="font-size:12px; display:none;">
+            <thead id="import-preview-head"></thead>
+            <tbody id="import-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('import-modal')">Cancel</button>
+        <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmImport()" disabled>
+          <i class="fa-solid fa-check"></i> Confirm Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/chatbot.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
